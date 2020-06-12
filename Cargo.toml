@@ -2,8 +2,12 @@
 name = "rexp"
 version = "0.1.0"
 authors = ["guygastineau <strings.stringsandstrings@gmail.com>"]
+description = "A Sexp parser library that produces a simple IR of fully exported types."
+readme = "READEME.md"
+keywords = ["parser", "sexp", "lisp", "scheme", "language", "IR"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+nom = "5.1.1"
