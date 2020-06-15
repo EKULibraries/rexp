@@ -229,7 +229,7 @@ fn string_constant() {
 }
 
 // Quoted Constants
-use rexp::Quote::{Quote, Quasi, Un, Splice};
+use rexp::Quote::{Quote, Quasi, UnQuote, Splice};
 
 #[test]
 fn quoted_int() {
@@ -246,16 +246,13 @@ fn quoted_int() {
         sexp("`345"),
         Ok(("", Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))))
     );
-    // Un should really not work, but that needs to be handled in a later pass
-    assert_eq!(
-        sexp(",345"),
-        Ok(("", Sexp::Quote(Un(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))))
-    );
-    // Splice should also not work, but that can be handled at a later pass
-    assert_eq!(
-        sexp("@345"),
-        Ok(("", Sexp::Quote(Splice(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))))
-    );
+}
+
+#[test]
+fn cant_splice_unquote_int() {
+    assert!(sexp(",345").is_err());
+
+    assert!(sexp("@345").is_err());
 }
 
 #[test]
@@ -273,15 +270,13 @@ fn quoted_float() {
         sexp("`756.314"),
         Ok(("", Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314))))))))
     );
-    // Splice and Un don't make sense on constants
-    assert_eq!(
-        sexp("'756.314"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314))))))))
-    );
-    assert_eq!(
-        sexp("'756.314"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314))))))))
-    );
+}
+
+#[test]
+fn cant_splice_or_quote_float() {
+    assert!(sexp(",756.314").is_err());
+
+    assert!(sexp("@756.314").is_err());
 }
 
 #[test]

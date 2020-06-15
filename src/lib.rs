@@ -6,7 +6,7 @@ use nom::{
     bytes::complete::{is_not, tag},
     character::complete::{alpha0, alpha1, char, digit1, multispace0, multispace1, one_of},
     combinator::{cut, map, map_res, not, opt},
-    error::{context, VerboseError, VerboseErrorKind},
+    error::{context, VerboseError, VerboseErrorKind::Context},
     multi::many0,
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
     take_while, IResult, Parser, Err, Needed,
@@ -29,7 +29,7 @@ pub enum Atom {
 pub enum Quote {
     Quote(Box::<Sexp>),
     Quasi(Box::<Sexp>),
-    Un(Box::<Sexp>),
+    UnQuote(Box::<Sexp>),
     Splice(Box::<Sexp>),
 }
 
@@ -40,14 +40,46 @@ pub enum Sexp {
     Quote(Quote),
 }
 
+fn unquote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
+    match preceded(tag(","), sexp)(i) {
+        Ok((ii, ss)) => {
+            match ss {
+                Sexp::Constant(_) =>
+                    Err(Err::Failure(
+                        VerboseError {
+                            errors: vec![(ii, Context("can't unsplice literals"))]
+                        }
+                    )),
+                _ => Ok((ii, Quote::UnQuote(Box::new(ss))))
+            }
+        },
+        Err(err) => Err(err),
+    }
+}
+
+fn splice<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
+    match preceded(tag("@"), sexp)(i) {
+        Ok((ii, ss)) => {
+            match ss {
+                Sexp::Constant(_) =>
+                    Err(Err::Failure(
+                        VerboseError {
+                            errors: vec![(ii, Context("can't splice literals"))]
+                        }
+                    )),
+                _ => Ok((ii, Quote::Splice(Box::new(ss))))
+            }
+        },
+        Err(err) => Err(err),
+    }
+}
+
 pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
     alt((
         map(preceded(tag("'"), sexp), |s| Quote::Quote(Box::new(s))),
         map(preceded(tag("`"), sexp), |s| Quote::Quasi(Box::new(s))),
-        map(preceded(tag(","), sexp), |s| {
-            Quote::Un(Box::new(s))
-        }),
-        map(preceded(tag("@"), sexp), |s| Quote::Splice(Box::new(s))),
+        unquote,
+        splice,
     ))(i)
 }
 
@@ -85,7 +117,7 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
         }
     }
     Err(Err::Error(
-        VerboseError { errors: vec![(s, VerboseErrorKind::Context("string missing closing \"")) ] }
+        VerboseError { errors: vec![(s, Context("string missing closing \"")) ] }
     ))
 }
 
