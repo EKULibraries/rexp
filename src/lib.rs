@@ -76,6 +76,13 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
     Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
+fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
+    alt((
+        map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| Atom::Symbol(s.to_owned())),
+        map(is_not(" \t\n"), |s: &str| Atom::Symbol(s.to_owned()))
+    ))(i)
+}
+
 fn parse_num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     alt((
         // Floats
@@ -153,5 +160,20 @@ mod tests {
     #[test]
     fn parse_negative_float() {
         assert_eq!(parse_num("-254.345"), Ok(("", Num::Float(-254.345))));
+    }
+
+    // Symbols
+
+    #[test]
+    fn parse_simple_symbols() {
+        assert_eq!(parse_symbol("map"), Ok(("", Atom::Symbol("map".to_owned()))));
+        assert_eq!(
+            parse_symbol("^!symbols#$%legal"),
+            Ok(("", Atom::Symbol("^!symbols#$%legal".to_owned())))
+        );
+        assert_eq!(
+            parse_symbol("regular-name"),
+            Ok(("", Atom::Symbol("regular-name".to_owned())))
+        );
     }
 }
