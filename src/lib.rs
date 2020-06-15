@@ -32,13 +32,13 @@ pub enum Sexp {
     Quote(Box<Sexp>),
 }
 
-pub fn parse_sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
+pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
     alt((
-        map(preceded(tag("'"), parse_sexp), |s| Sexp::Quote(Box::new(s))),
+        map(preceded(tag("'"), sexp), |s| Sexp::Quote(Box::new(s))),
         map(
             delimited(
                 char('('),
-                many0(preceded(multispace0, parse_sexp)),
+                many0(preceded(multispace0, sexp)),
                 context("closing paren", cut(preceded(multispace0, char(')'))))
             ),
             Sexp::List
@@ -47,7 +47,7 @@ pub fn parse_sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str
     ))(i)
 }
 
-fn parse_string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     terminated(preceded(tag("\""), in_quotes), tag("\""))(i)
 }
 
@@ -68,7 +68,7 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
     Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
-fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     alt((
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
@@ -77,7 +77,7 @@ fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
     ))(i)
 }
 
-fn parse_num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
+fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     alt((
         // Floats
         map_res(
@@ -106,198 +106,8 @@ fn parse_num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 
 pub fn parse_atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     alt((
-        map(parse_string, Atom::String),
-        map(parse_symbol, Atom::Symbol),
-        map(parse_num, Atom::Num),
+        map(string, Atom::String),
+        map(symbol, Atom::Symbol),
+        map(num, Atom::Num),
     ))(i)
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    // Strings
-
-    #[test]
-    fn parse_whole_scm_string() {
-        assert_eq!(
-            parse_string("\"This is a test\""),
-            Ok(("", "This is a test".to_owned()))
-        );
-    }
-
-    #[test]
-    fn parse_scm_string_with_escaped_quotes() {
-        assert_eq!(
-            parse_string("\"This is a \\\"test\\\"\""),
-            Ok(("", "This is a \"test\"".to_owned()))
-        );
-        // With unclosed escaped string too
-        assert_eq!(
-            parse_string("\"This is a \\\"test\" and some more stuff"),
-            Ok((" and some more stuff", "This is a \"test".to_owned()))
-        );
-    }
-
-    #[test]
-    fn fail_to_parse_scm_string_without_active_quotes() {
-        assert!(parse_string("this is a test").is_err());
-        // And also with escaped quotes
-        assert!(parse_string("\\\"this is \\\" a \\\"test\\\"").is_err());
-    }
-
-    // Numbers
-
-    #[test]
-    fn parse_positive_integer() {
-        assert_eq!(parse_num("45"), Ok(("", Num::Int(45))));
-    }
-
-    #[test]
-    fn parse_negative_integer() {
-        assert_eq!(parse_num("-562"), Ok(("", Num::Int(-562))));
-    }
-
-    #[test]
-    fn parse_positive_float() {
-        assert_eq!(parse_num("67.432"), Ok(("", Num::Float(67.432))));
-    }
-
-    #[test]
-    fn parse_negative_float() {
-        assert_eq!(parse_num("-254.345"), Ok(("", Num::Float(-254.345))));
-    }
-
-    // Symbols
-
-    #[test]
-    fn parse_simple_symbols() {
-        assert_eq!(parse_symbol("map"), Ok(("", "map".to_owned())));
-        assert_eq!(
-            parse_symbol("^!symbols#$%legal"),
-            Ok(("", "^!symbols#$%legal".to_owned()))
-        );
-        assert_eq!(
-            parse_symbol("regular-name"),
-            Ok(("", "regular-name".to_owned()))
-        );
-    }
-
-    #[test]
-    fn only_get_first_symbol() {
-        assert_eq!(
-            parse_symbol("this is a test"),
-            Ok((" is a test", "this".to_owned()))
-        );
-    }
-
-    #[test]
-    fn parse_delimited_symbol() {
-        assert_eq!(
-            parse_symbol("|this is a symbol|"),
-            Ok(("", "this is a symbol".to_owned()))
-        );
-    }
-
-    #[test]
-    fn delimited_symbol_with_unmatched_delimiters() {
-        assert_eq!(parse_symbol("|this"), Ok(("", "|this".to_owned())));
-        assert_eq!(
-            parse_symbol("|these are many symbols"),
-            Ok((" are many symbols", "|these".to_owned()))
-        );
-        assert_eq!(parse_symbol("this|"), Ok(("", "this|".to_owned())));
-        assert_eq!(
-            parse_symbol("this|is many symbols"),
-            Ok((" many symbols", "this|is".to_owned()))
-        );
-    }
-
-    // Higher level parsing tests
-
-    // Atoms
-
-    // Strings
-
-    #[test]
-    fn parse_whole_atom_string() {
-        assert_eq!(
-            parse_atom("\"This is a test\""),
-            Ok(("", Atom::String("This is a test".to_owned())))
-        );
-    }
-
-    #[test]
-    fn parse_atom_string_with_escaped_quotes() {
-        assert_eq!(
-            parse_atom("\"This is a \\\"test\\\"\""),
-            Ok(("", Atom::String("This is a \"test\"".to_owned())))
-        );
-        // With unclosed escaped string too
-        assert_eq!(
-            parse_atom("\"This is a \\\"test\" and some more stuff"),
-            Ok((
-                " and some more stuff",
-                Atom::String("This is a \"test".to_owned())
-            ))
-        );
-    }
-
-    fn fail_atom_string_without_active_quotes_2() {
-        // And also with escaped quotes
-        assert!(parse_atom("\\\"this is \\\" a \\\"test\\\"").is_err());
-    }
-
-    // Numbers
-
-    #[test]
-    fn parse_atom_integer() {
-        assert_eq!(parse_num("45"), Ok(("", Num::Int(45))));
-
-        assert_eq!(parse_num("-562"), Ok(("", Num::Int(-562))));
-    }
-
-    #[test]
-    fn parse_atom_float() {
-        assert_eq!(parse_num("67.432"), Ok(("", Num::Float(67.432))));
-
-        assert_eq!(parse_num("-254.345"), Ok(("", Num::Float(-254.345))));
-    }
-
-    // Symbols
-
-    #[test]
-    fn parse_atom_symbols() {
-        assert_eq!(parse_symbol("map"), Ok(("", "map".to_owned())));
-        assert_eq!(
-            parse_symbol("^!symbols#$%legal"),
-            Ok(("", "^!symbols#$%legal".to_owned()))
-        );
-        assert_eq!(
-            parse_symbol("regular-name"),
-            Ok(("", "regular-name".to_owned()))
-        );
-        // only get first symbol
-        assert_eq!(
-            parse_symbol("this is a test"),
-            Ok((" is a test", "this".to_owned()))
-        );
-        // parse delimited symbol
-        assert_eq!(
-            parse_symbol("|this is a symbol|"),
-            Ok(("", "this is a symbol".to_owned()))
-        );
-        // delimited symbol with unmatched delimiters
-        assert_eq!(parse_symbol("|this"), Ok(("", "|this".to_owned())));
-        assert_eq!(
-            parse_symbol("|these are many symbols"),
-            Ok((" are many symbols", "|these".to_owned()))
-        );
-        assert_eq!(parse_symbol("this|"), Ok(("", "this|".to_owned())));
-        assert_eq!(
-            parse_symbol("this|is many symbols"),
-            Ok((" many symbols", "this|is".to_owned()))
-        );
-    }
 }
