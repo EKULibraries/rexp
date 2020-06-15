@@ -176,4 +176,36 @@ mod tests {
             Ok(("", Atom::Symbol("regular-name".to_owned())))
         );
     }
+
+    #[test]
+    fn only_get_first_symbol() {
+        assert_eq!(
+            parse_symbol("this is a test"),
+            Ok((" is a test", Atom::Symbol("this".to_owned()))));
+    }
+
+    #[test]
+    fn parse_delimited_symbol() {
+        assert_eq!(
+            parse_symbol("|this is a symbol|"),
+            Ok(("", Atom::Symbol("this is a symbol".to_owned())))
+        )
+    }
+
+    #[test]
+    fn delimited_symbol_with_unmatched_delimiters() {
+        assert_eq!(
+            parse_symbol("|this"),
+            Ok(("", Atom::Symbol("|this".to_owned())))
+        );
+        assert_eq!(
+            parse_symbol("|these are many symbols"),
+            Ok((" are many symbols", Atom::Symbol("|these".to_owned())))
+        );
+        assert_eq!(parse_symbol("this|"), Ok(("", Atom::Symbol("this|".to_owned()))));
+        assert_eq!(
+            parse_symbol("this|is many symbols"),
+            Ok((" many symbols", Atom::Symbol("this|is".to_owned())))
+        );
+    }
 }
