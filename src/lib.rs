@@ -1,3 +1,6 @@
+// Only turned off for now
+#![allow(dead_code, unused_imports)]
+
 use nom::{
     branch::alt,
     bytes::complete::{ tag, is_not },
@@ -43,13 +46,13 @@ fn escaped_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&
     map(preceded(tag("\\"), one_of("\"")), |_| '"')(i)
 }
 
-fn ending_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
+fn active_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
     map(preceded(not(tag("\\")), one_of("\"")), |_| '"')(i)
 }
 
 fn parse_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     map(
-        preceded(tag("\""), many0(preceded(not(ending_double_quote), is_not("\"\\")))),
+        preceded(tag("\""), many0(preceded(not(active_double_quote), is_not("\"\\")))),
         |s: Vec<&str>| Atom::String(s.join(""))
     )(i)
 }
