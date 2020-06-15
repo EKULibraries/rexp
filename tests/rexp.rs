@@ -1,4 +1,4 @@
-use super::*;
+use rexp::*;
 
 // Strings
 
@@ -106,20 +106,20 @@ fn delimited_symbol_with_unmatched_delimiters() {
 #[test]
 fn parse_whole_atom_string() {
     assert_eq!(
-        parse_atom("\"This is a test\""),
+        atom("\"This is a test\""),
         Ok(("", Atom::String("This is a test".to_owned())))
     );
 }
 
 #[test]
-fn parse_atom_string_with_escaped_quotes() {
+fn atom_string_with_escaped_quotes() {
     assert_eq!(
-        parse_atom("\"This is a \\\"test\\\"\""),
+        atom("\"This is a \\\"test\\\"\""),
         Ok(("", Atom::String("This is a \"test\"".to_owned())))
     );
     // With unclosed escaped string too
     assert_eq!(
-        parse_atom("\"This is a \\\"test\" and some more stuff"),
+        atom("\"This is a \\\"test\" and some more stuff"),
         Ok((
             " and some more stuff",
             Atom::String("This is a \"test".to_owned())
@@ -129,29 +129,43 @@ fn parse_atom_string_with_escaped_quotes() {
 
 fn fail_atom_string_without_active_quotes_2() {
     // And also with escaped quotes
-    assert!(parse_atom("\\\"this is \\\" a \\\"test\\\"").is_err());
+    assert!(atom("\\\"this is \\\" a \\\"test\\\"").is_err());
 }
 
 // Numbers
 
 #[test]
-fn parse_atom_integer() {
+fn num_integer() {
     assert_eq!(num("45"), Ok(("", Num::Int(45))));
 
     assert_eq!(num("-562"), Ok(("", Num::Int(-562))));
 }
 
 #[test]
-fn parse_atom_float() {
+fn num_float() {
     assert_eq!(num("67.432"), Ok(("", Num::Float(67.432))));
 
     assert_eq!(num("-254.345"), Ok(("", Num::Float(-254.345))));
 }
 
+#[test]
+fn atom_integer() {
+    assert_eq!(atom("45"), Ok(("", Atom::Num(Num::Int(45)))));
+
+    assert_eq!(atom("-562"), Ok(("", Atom::Num(Num::Int(-562)))));
+}
+
+#[test]
+fn atom_float() {
+    assert_eq!(atom("67.432"), Ok(("", Atom::Num(Num::Float(67.432)))));
+
+    assert_eq!(atom("-254.345"), Ok(("", Atom::Num(Num::Float(-254.345)))));
+}
+
 // Symbols
 
 #[test]
-fn parse_atom_symbols() {
+fn atom_symbols() {
     assert_eq!(symbol("map"), Ok(("", "map".to_owned())));
     assert_eq!(
         symbol("^!symbols#$%legal"),
@@ -187,7 +201,27 @@ fn parse_atom_symbols() {
 // Sexp
 
 // Constants
+
+#[test]
+fn int_constant() {
+    assert_eq!(sexp("345"), Ok(("", Sexp::Constant(Atom::Num(Num::Int(345))))));
+}
+
+#[test]
+fn float_constant() {
+    assert_eq!(sexp("756.314"), Ok(("", Sexp::Constant(Atom::Num(Num::Float(756.314))))));
+}
+
 #[test]
 fn symbol_constant() {
-    assert_eq!(sexp("name"), Ok("", Sexp::Constant(Atom::Symbol("name".to_owned()))));
+    assert_eq!(sexp("name"), Ok(("", Sexp::Constant(Atom::Symbol("name".to_owned())))));
+}
+
+#[test]
+fn string_constant() {
+    assert_eq!(
+        sexp("\"This is a \\\"string\\\"!\""),
+        Ok(("", Sexp::Constant(Atom::String("This is a \"string\"!".to_owned()))))
+
+    );
 }

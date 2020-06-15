@@ -43,11 +43,11 @@ pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
             ),
             Sexp::List
         ),
-        map(parse_atom, Sexp::Constant)
+        map(atom, Sexp::Constant)
     ))(i)
 }
 
-fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+pub fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     terminated(preceded(tag("\""), in_quotes), tag("\""))(i)
 }
 
@@ -68,7 +68,7 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
     Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
-fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+pub fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     alt((
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
@@ -77,7 +77,7 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     ))(i)
 }
 
-fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
+pub fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     alt((
         // Floats
         map_res(
@@ -104,7 +104,7 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     ))(i)
 }
 
-pub fn parse_atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
+pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     alt((
         map(string, Atom::String),
         map(symbol, Atom::Symbol),
