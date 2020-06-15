@@ -270,3 +270,8 @@ fn quoted_symbol() {
         ))
     );
 }
+
+#[test]
+fn fails_on_empy_sexp() {
+    assert!(sexp("").is_err());
+}
