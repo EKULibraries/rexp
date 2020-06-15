@@ -127,11 +127,6 @@ fn atom_string_with_escaped_quotes() {
     );
 }
 
-fn fail_atom_string_without_active_quotes_2() {
-    // And also with escaped quotes
-    assert!(atom("\\\"this is \\\" a \\\"test\\\"").is_err());
-}
-
 // Numbers
 
 #[test]
@@ -205,11 +200,13 @@ fn atom_symbols() {
 #[test]
 fn int_constant() {
     assert_eq!(sexp("345"), Ok(("", Sexp::Constant(Atom::Num(Num::Int(345))))));
+    assert_eq!(sexp("-345"), Ok(("", Sexp::Constant(Atom::Num(Num::Int(-345))))));
 }
 
 #[test]
 fn float_constant() {
     assert_eq!(sexp("756.314"), Ok(("", Sexp::Constant(Atom::Num(Num::Float(756.314))))));
+    assert_eq!(sexp("-756.314"), Ok(("", Sexp::Constant(Atom::Num(Num::Float(-756.314))))));
 }
 
 #[test]
@@ -223,5 +220,53 @@ fn string_constant() {
         sexp("\"This is a \\\"string\\\"!\""),
         Ok(("", Sexp::Constant(Atom::String("This is a \"string\"!".to_owned()))))
 
+    );
+}
+
+// Quoted Constants
+
+#[test]
+fn quoted_int() {
+    assert_eq!(
+        sexp("'345"),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(345)))))))
+    );
+    assert_eq!(
+        sexp("'-345"),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(-345)))))))
+    );
+}
+
+#[test]
+fn quoted_float() {
+    assert_eq!(
+        sexp("'756.314"),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314)))))))
+    );
+    assert_eq!(
+        sexp("'-756.314"),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(-756.314)))))))
+    );
+}
+
+#[test]
+fn quoted_string() {
+    assert_eq!(
+        sexp("'\"this is a quoted string\""),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::String("this is a quoted string".to_owned()))))))
+    );
+}
+
+#[test]
+fn quoted_symbol() {
+    assert_eq!(
+        sexp("'symbol"),
+        Ok(("", Sexp::Quote(Box::new(Sexp::Constant(Atom::Symbol("symbol".to_owned())))))));
+    assert_eq!(
+        sexp("'|this symbol has spaces|"),
+        Ok((
+            "",
+            Sexp::Quote(Box::new(Sexp::Constant(Atom::Symbol("this symbol has spaces".to_owned()))))
+        ))
     );
 }

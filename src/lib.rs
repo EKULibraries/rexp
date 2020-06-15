@@ -106,8 +106,8 @@ pub fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 
 pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     alt((
+        map(num, Atom::Num),
         map(string, Atom::String),
         map(symbol, Atom::Symbol),
-        map(num, Atom::Num),
     ))(i)
 }
