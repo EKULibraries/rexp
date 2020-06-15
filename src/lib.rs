@@ -16,7 +16,13 @@ use nom::{
     combinator::{ cut, map, map_res, opt, not },
     error::{ context, VerboseError },
     multi::many0,
-    sequence::{ delimited, preceded, terminated, tuple },
+    sequence::{
+        delimited,
+        preceded,
+        terminated,
+        separated_pair,
+        tuple
+    },
     take_while,
     IResult,
     Parser,
@@ -25,7 +31,7 @@ use nom::{
 #[derive(Debug, PartialEq, Clone)]
 pub enum Num {
     Int(i64),
-    //Float(f64),
+    Float(f64),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -72,12 +78,23 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
 
 fn parse_num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     alt((
+        // Floats
+        map_res(separated_pair(digit1, tag("."), digit1), |(whole, part): (&str, &str)| {
+            (whole.to_owned() + "." + part).parse::<f64>().map(Num::Float)
+        }),
+        map_res(
+            preceded(tag("-"), separated_pair(digit1, tag("."), digit1)),
+            |(whole, part): (&str, &str)| {
+                (whole.to_owned() + "." + part).parse::<f64>().map(|f| Num::Float(-f))
+            }
+        ),
+        // Ints
         map_res(digit1, |d: &str| {
             d.parse::<i64>().map(Num::Int)
         }),
         map_res(preceded(tag("-"), digit1), |d: &str| {
             d.parse::<i64>().map(|i| Num::Int(- i))
-        })
+        }),
     ))(i)
 }
 
@@ -121,5 +138,20 @@ mod tests {
     #[test]
     fn parse_positive_integer() {
         assert_eq!(parse_num("45"), Ok(("", Num::Int(45))));
+    }
+
+    #[test]
+    fn parse_negative_integer() {
+        assert_eq!(parse_num("-562"), Ok(("", Num::Int(-562))));
+    }
+
+    #[test]
+    fn parse_positive_float() {
+        assert_eq!(parse_num("67.432"), Ok(("", Num::Float(67.432))));
+    }
+
+    #[test]
+    fn parse_negative_float() {
+        assert_eq!(parse_num("-254.345"), Ok(("", Num::Float(-254.345))));
     }
 }
