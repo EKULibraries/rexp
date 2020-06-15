@@ -49,13 +49,10 @@ pub enum Sexp {
 
 // Begin combinators
 
-fn quoted_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
-    map(
-        terminated(
-            preceded(tag("\""), in_quotes),
-            tag("\"")
-        ),
-        Atom::String
+fn quoted_string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+    terminated(
+        preceded(tag("\""), in_quotes),
+        tag("\"")
     )(i)
 }
 
@@ -76,10 +73,10 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
     Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
-fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
+fn parse_symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     alt((
-        map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| Atom::Symbol(s.to_owned())),
-        map(is_not(" \t\n"), |s: &str| Atom::Symbol(s.to_owned()))
+        map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| s.to_owned()),
+        map(is_not(" \t\n"), |s: &str| s.to_owned())
     ))(i)
 }
 
@@ -116,7 +113,7 @@ mod tests {
     fn parse_whole_scm_string() {
         assert_eq!(
             quoted_string("\"This is a test\""),
-            Ok(("", Atom::String("This is a test".to_owned())))
+            Ok(("", "This is a test".to_owned()))
         );
     }
 
@@ -124,12 +121,12 @@ mod tests {
     fn parse_scm_string_with_escaped_quotes() {
         assert_eq!(
             quoted_string("\"This is a \\\"test\\\"\""),
-            Ok(("", Atom::String("This is a \"test\"".to_owned())))
+            Ok(("", "This is a \"test\"".to_owned()))
         );
         // With unclosed escaped string too
         assert_eq!(
             quoted_string("\"This is a \\\"test\" and some more stuff"),
-            Ok((" and some more stuff", Atom::String("This is a \"test".to_owned())))
+            Ok((" and some more stuff", "This is a \"test".to_owned()))
         );
     }
 
@@ -166,14 +163,14 @@ mod tests {
 
     #[test]
     fn parse_simple_symbols() {
-        assert_eq!(parse_symbol("map"), Ok(("", Atom::Symbol("map".to_owned()))));
+        assert_eq!(parse_symbol("map"), Ok(("", "map".to_owned())));
         assert_eq!(
             parse_symbol("^!symbols#$%legal"),
-            Ok(("", Atom::Symbol("^!symbols#$%legal".to_owned())))
+            Ok(("", "^!symbols#$%legal".to_owned()))
         );
         assert_eq!(
             parse_symbol("regular-name"),
-            Ok(("", Atom::Symbol("regular-name".to_owned())))
+            Ok(("", "regular-name".to_owned()))
         );
     }
 
@@ -181,31 +178,31 @@ mod tests {
     fn only_get_first_symbol() {
         assert_eq!(
             parse_symbol("this is a test"),
-            Ok((" is a test", Atom::Symbol("this".to_owned()))));
+            Ok((" is a test", "this".to_owned())));
     }
 
     #[test]
     fn parse_delimited_symbol() {
         assert_eq!(
             parse_symbol("|this is a symbol|"),
-            Ok(("", Atom::Symbol("this is a symbol".to_owned())))
-        )
+            Ok(("", "this is a symbol".to_owned()))
+        );
     }
 
     #[test]
     fn delimited_symbol_with_unmatched_delimiters() {
         assert_eq!(
             parse_symbol("|this"),
-            Ok(("", Atom::Symbol("|this".to_owned())))
+            Ok(("", "|this".to_owned()))
         );
         assert_eq!(
             parse_symbol("|these are many symbols"),
-            Ok((" are many symbols", Atom::Symbol("|these".to_owned())))
+            Ok((" are many symbols", "|these".to_owned()))
         );
-        assert_eq!(parse_symbol("this|"), Ok(("", Atom::Symbol("this|".to_owned()))));
+        assert_eq!(parse_symbol("this|"), Ok(("", "this|".to_owned())));
         assert_eq!(
             parse_symbol("this|is many symbols"),
-            Ok((" many symbols", Atom::Symbol("this|is".to_owned())))
+            Ok((" many symbols", "this|is".to_owned()))
         );
     }
 }
