@@ -6,10 +6,10 @@ use nom::{
     bytes::complete::{is_not, tag},
     character::complete::{alpha0, alpha1, char, digit1, multispace0, multispace1, one_of},
     combinator::{cut, map, map_res, not, opt},
-    error::{context, VerboseError},
+    error::{context, VerboseError, VerboseErrorKind},
     multi::many0,
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
-    take_while, IResult, Parser,
+    take_while, IResult, Parser, Err, Needed,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -26,15 +26,34 @@ pub enum Atom {
 }
 
 #[derive(Debug, PartialEq, Clone)]
+pub enum Quote {
+    Quote(Box::<Sexp>),
+    Quasi(Box::<Sexp>),
+    Un(Box::<Sexp>),
+    Splice(Box::<Sexp>),
+}
+
+#[derive(Debug, PartialEq, Clone)]
 pub enum Sexp {
     Constant(Atom),
     List(Vec<Sexp>),
-    Quote(Box<Sexp>),
+    Quote(Quote),
+}
+
+pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
+    alt((
+        map(preceded(tag("'"), sexp), |s| Quote::Quote(Box::new(s))),
+        map(preceded(tag("`"), sexp), |s| Quote::Quasi(Box::new(s))),
+        map(preceded(tag(","), sexp), |s| {
+            Quote::Un(Box::new(s))
+        }),
+        map(preceded(tag("@"), sexp), |s| Quote::Splice(Box::new(s))),
+    ))(i)
 }
 
 pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
     alt((
-        map(preceded(tag("'"), sexp), |s| Sexp::Quote(Box::new(s))),
+        map(quote, Sexp::Quote),
         map(
             delimited(
                 char('('),
@@ -48,10 +67,10 @@ pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
 }
 
 pub fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
-    terminated(preceded(tag("\""), in_quotes), tag("\""))(i)
+    terminated(preceded(tag("\""), string_inner), tag("\""))(i)
 }
 
-fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     let mut result = String::new();
     let mut skip = false;
 
@@ -65,7 +84,9 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
             skip = false;
         }
     }
-    Err(nom::Err::Incomplete(nom::Needed::Unknown))
+    Err(Err::Error(
+        VerboseError { errors: vec![(s, VerboseErrorKind::Context("string missing closing \"")) ] }
+    ))
 }
 
 pub fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
