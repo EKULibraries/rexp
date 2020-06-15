@@ -70,40 +70,56 @@ fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> 
     Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
+fn parse_num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
+    alt((
+        map_res(digit1, |d: &str| {
+            d.parse::<i64>().map(Num::Int)
+        }),
+        map_res(preceded(tag("-"), digit1), |d: &str| {
+            d.parse::<i64>().map(|i| Num::Int(- i))
+        })
+    ))(i)
+}
+
 #[cfg(test)]
 mod tests {
-    use nom::error::ErrorKind;
 
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
+    use super::*;
+
+    // Strings
 
     #[test]
     fn parse_whole_scm_string() {
         assert_eq!(
-            super::quoted_string("\"This is a test\""),
-            Ok(("", super::Atom::String("This is a test".to_owned())))
+            quoted_string("\"This is a test\""),
+            Ok(("", Atom::String("This is a test".to_owned())))
         );
     }
 
     #[test]
     fn parse_scm_string_with_escaped_quotes() {
         assert_eq!(
-            super::quoted_string("\"This is a \\\"test\\\"\""),
-            Ok(("", super::Atom::String("This is a \"test\"".to_owned())))
+            quoted_string("\"This is a \\\"test\\\"\""),
+            Ok(("", Atom::String("This is a \"test\"".to_owned())))
         );
         // With unclosed escaped string too
         assert_eq!(
-            super::quoted_string("\"This is a \\\"test\" and some more stuff"),
-            Ok((" and some more stuff", super::Atom::String("This is a \"test".to_owned())))
+            quoted_string("\"This is a \\\"test\" and some more stuff"),
+            Ok((" and some more stuff", Atom::String("This is a \"test".to_owned())))
         );
     }
 
     #[test]
     fn fail_to_parse_scm_string_without_active_quotes() {
-        assert!(super::quoted_string("this is a test").is_err());
+        assert!(quoted_string("this is a test").is_err());
         // And also with escaped quotes
-        assert!(super::quoted_string("\\\"this is \\\" a \\\"test\\\"").is_err());
+        assert!(quoted_string("\\\"this is \\\" a \\\"test\\\"").is_err());
+    }
+
+    // Numbers
+
+    #[test]
+    fn parse_positive_integer() {
+        assert_eq!(parse_num("45"), Ok(("", Num::Int(45))));
     }
 }
