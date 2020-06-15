@@ -9,7 +9,7 @@ use nom::{
     error::{context, VerboseError, VerboseErrorKind::Context},
     multi::many0,
     sequence::{delimited, preceded, separated_pair, terminated, tuple},
-    take_while, IResult, Parser, Err, Needed,
+    take_while, Err, IResult, Needed, Parser,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -27,10 +27,10 @@ pub enum Atom {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Quote {
-    Quote(Box::<Sexp>),
-    Quasi(Box::<Sexp>),
-    UnQuote(Box::<Sexp>),
-    Splice(Box::<Sexp>),
+    Quote(Box<Sexp>),
+    Quasi(Box<Sexp>),
+    UnQuote(Box<Sexp>),
+    Splice(Box<Sexp>),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -40,35 +40,17 @@ pub enum Sexp {
     Quote(Quote),
 }
 
-fn unquote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
-    match preceded(tag(","), sexp)(i) {
-        Ok((ii, ss)) => {
-            match ss {
-                Sexp::Constant(_) =>
-                    Err(Err::Failure(
-                        VerboseError {
-                            errors: vec![(ii, Context("can't unsplice literals"))]
-                        }
-                    )),
-                _ => Ok((ii, Quote::UnQuote(Box::new(ss))))
-            }
-        },
-        Err(err) => Err(err),
-    }
-}
-
-fn splice<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
-    match preceded(tag("@"), sexp)(i) {
-        Ok((ii, ss)) => {
-            match ss {
-                Sexp::Constant(_) =>
-                    Err(Err::Failure(
-                        VerboseError {
-                            errors: vec![(ii, Context("can't splice literals"))]
-                        }
-                    )),
-                _ => Ok((ii, Quote::Splice(Box::new(ss))))
-            }
+fn quote_bouncer<'a>(
+    mut parser: impl FnMut(&'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>>,
+    builder: impl Fn(Box<Sexp>) -> Quote,
+    msg: &'static str,
+) -> impl FnMut(&'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
+    move |i: &'a str| match parser(i) {
+        Ok((ii, ss)) => match ss {
+            Sexp::Constant(_) => Err(Err::Failure(VerboseError {
+                errors: vec![(ii, Context(msg))],
+            })),
+            _ => Ok((ii, builder(Box::new(ss)))),
         },
         Err(err) => Err(err),
     }
@@ -78,8 +60,16 @@ pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
     alt((
         map(preceded(tag("'"), sexp), |s| Quote::Quote(Box::new(s))),
         map(preceded(tag("`"), sexp), |s| Quote::Quasi(Box::new(s))),
-        unquote,
-        splice,
+        quote_bouncer(
+            preceded(tag(","), sexp),
+            Quote::UnQuote,
+            "can't unquote literals",
+        ),
+        quote_bouncer(
+            preceded(tag("@"), sexp),
+            Quote::Splice,
+            "can't splice literals",
+        ),
     ))(i)
 }
 
@@ -90,11 +80,11 @@ pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
             delimited(
                 char('('),
                 many0(preceded(multispace0, sexp)),
-                context("closing paren", cut(preceded(multispace0, char(')'))))
+                context("closing paren", cut(preceded(multispace0, char(')')))),
             ),
-            Sexp::List
+            Sexp::List,
         ),
-        map(atom, Sexp::Constant)
+        map(atom, Sexp::Constant),
     ))(i)
 }
 
@@ -116,9 +106,9 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
             skip = false;
         }
     }
-    Err(Err::Error(
-        VerboseError { errors: vec![(s, Context("string missing closing \"")) ] }
-    ))
+    Err(Err::Error(VerboseError {
+        errors: vec![(s, Context("string missing closing \""))],
+    }))
 }
 
 pub fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {

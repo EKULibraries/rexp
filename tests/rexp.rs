@@ -61,10 +61,7 @@ fn parse_simple_symbols() {
         symbol("^!symbols#$%legal"),
         Ok(("", "^!symbols#$%legal".to_owned()))
     );
-    assert_eq!(
-        symbol("regular-name"),
-        Ok(("", "regular-name".to_owned()))
-    );
+    assert_eq!(symbol("regular-name"), Ok(("", "regular-name".to_owned())));
 }
 
 #[test]
@@ -166,10 +163,7 @@ fn atom_symbols() {
         symbol("^!symbols#$%legal"),
         Ok(("", "^!symbols#$%legal".to_owned()))
     );
-    assert_eq!(
-        symbol("regular-name"),
-        Ok(("", "regular-name".to_owned()))
-    );
+    assert_eq!(symbol("regular-name"), Ok(("", "regular-name".to_owned())));
     // only get first symbol
     assert_eq!(
         symbol("this is a test"),
@@ -204,47 +198,73 @@ fn fails_on_empy_sexp() {
 
 #[test]
 fn int_constant() {
-    assert_eq!(sexp("345"), Ok(("", Sexp::Constant(Atom::Num(Num::Int(345))))));
-    assert_eq!(sexp("-345"), Ok(("", Sexp::Constant(Atom::Num(Num::Int(-345))))));
+    assert_eq!(
+        sexp("345"),
+        Ok(("", Sexp::Constant(Atom::Num(Num::Int(345)))))
+    );
+    assert_eq!(
+        sexp("-345"),
+        Ok(("", Sexp::Constant(Atom::Num(Num::Int(-345)))))
+    );
 }
 
 #[test]
 fn float_constant() {
-    assert_eq!(sexp("756.314"), Ok(("", Sexp::Constant(Atom::Num(Num::Float(756.314))))));
-    assert_eq!(sexp("-756.314"), Ok(("", Sexp::Constant(Atom::Num(Num::Float(-756.314))))));
+    assert_eq!(
+        sexp("756.314"),
+        Ok(("", Sexp::Constant(Atom::Num(Num::Float(756.314)))))
+    );
+    assert_eq!(
+        sexp("-756.314"),
+        Ok(("", Sexp::Constant(Atom::Num(Num::Float(-756.314)))))
+    );
 }
 
 #[test]
 fn symbol_constant() {
-    assert_eq!(sexp("name"), Ok(("", Sexp::Constant(Atom::Symbol("name".to_owned())))));
+    assert_eq!(
+        sexp("name"),
+        Ok(("", Sexp::Constant(Atom::Symbol("name".to_owned()))))
+    );
 }
 
 #[test]
 fn string_constant() {
     assert_eq!(
         sexp("\"This is a \\\"string\\\"!\""),
-        Ok(("", Sexp::Constant(Atom::String("This is a \"string\"!".to_owned()))))
-
+        Ok((
+            "",
+            Sexp::Constant(Atom::String("This is a \"string\"!".to_owned()))
+        ))
     );
 }
 
 // Quoted Constants
-use rexp::Quote::{Quote, Quasi, UnQuote, Splice};
+use rexp::Quote::{Quasi, Quote, Splice, UnQuote};
 
 #[test]
 fn quoted_int() {
     assert_eq!(
         sexp("'345"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))
+        ))
     );
     assert_eq!(
         sexp("'-345"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(-345))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(-345))))))
+        ))
     );
     // Quasi
     assert_eq!(
         sexp("`345"),
-        Ok(("", Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))
+        ))
     );
 }
 
@@ -259,16 +279,31 @@ fn cant_splice_unquote_int() {
 fn quoted_float() {
     assert_eq!(
         sexp("'756.314"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(
+                756.314
+            ))))))
+        ))
     );
     assert_eq!(
         sexp("'-756.314"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(-756.314))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(
+                -756.314
+            ))))))
+        ))
     );
     // Quasi
     assert_eq!(
         sexp("`756.314"),
-        Ok(("", Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Float(756.314))))))))
+        Ok((
+            "",
+            Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Float(
+                756.314
+            ))))))
+        ))
     );
 }
 
@@ -285,7 +320,9 @@ fn quoted_string() {
         sexp("'\"this is a quoted string\""),
         Ok((
             "",
-            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::String("this is a quoted string".to_owned())))))
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::String(
+                "this is a quoted string".to_owned()
+            )))))
         ))
     );
 }
@@ -294,12 +331,20 @@ fn quoted_string() {
 fn quoted_symbol() {
     assert_eq!(
         sexp("'symbol"),
-        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol("symbol".to_owned()))))))));
+        Ok((
+            "",
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol(
+                "symbol".to_owned()
+            )))))
+        ))
+    );
     assert_eq!(
         sexp("'|this symbol has spaces|"),
         Ok((
             "",
-            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol("this symbol has spaces".to_owned())))))
+            Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol(
+                "this symbol has spaces".to_owned()
+            )))))
         ))
     );
 }
