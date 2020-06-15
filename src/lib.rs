@@ -29,9 +29,23 @@ pub enum Atom {
 pub enum Sexp {
     Constant(Atom),
     List(Vec<Sexp>),
+    Quote(Box<Sexp>),
 }
 
-// Begin combinators
+pub fn parse_sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
+    alt((
+        map(preceded(tag("'"), parse_sexp), |s| Sexp::Quote(Box::new(s))),
+        map(
+            delimited(
+                char('('),
+                many0(preceded(multispace0, parse_sexp)),
+                context("closing paren", cut(preceded(multispace0, char(')'))))
+            ),
+            Sexp::List
+        ),
+        map(parse_atom, Sexp::Constant)
+    ))(i)
+}
 
 fn parse_string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     terminated(preceded(tag("\""), in_quotes), tag("\""))(i)
