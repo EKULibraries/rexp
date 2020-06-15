@@ -42,12 +42,12 @@ pub enum Sexp {
 
 // Begin combinators
 
-fn escaped_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    map(preceded(tag("\\"), one_of("\"")), |_| '"')(i)
-}
-
 fn active_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
     map(preceded(not(tag("\\")), one_of("\"")), |_| '"')(i)
+}
+
+fn escaped_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
+    map(preceded(tag("\\"), one_of("\"")), |_| '"')(i)
 }
 
 fn parse_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
@@ -59,8 +59,27 @@ fn parse_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>>
 
 #[cfg(test)]
 mod tests {
+    use nom::error::ErrorKind;
+
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn parse_active_double_quote() {
+        assert_eq!(super::active_double_quote("\""), Ok(("", '"')));
+    }
+
+    fn fail_on_non_active_quote() {
+        assert!(super::active_double_quote("\\\"").is_err());
+    }
+
+    fn parse_escaped_double_quote() {
+        assert_eq!(super::escaped_double_quote("\\\""), Ok(("", '"')));
+    }
+
+    fn fail_on_non_escaped_double_quote() {
+        assert!(super::escaped_double_quote("\"").is_err());
     }
 }
