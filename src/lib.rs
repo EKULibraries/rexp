@@ -17,6 +17,7 @@ use nom::{
     error::{ context, VerboseError },
     multi::many0,
     sequence::{ delimited, preceded, terminated, tuple },
+    take_while,
     IResult,
     Parser,
 };
@@ -42,19 +43,31 @@ pub enum Sexp {
 
 // Begin combinators
 
-fn active_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    map(preceded(not(tag("\\")), one_of("\"")), |_| '"')(i)
-}
-
-fn escaped_double_quote<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    map(preceded(tag("\\"), one_of("\"")), |_| '"')(i)
-}
-
-fn parse_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
+fn quoted_string<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     map(
-        preceded(tag("\""), many0(preceded(not(active_double_quote), is_not("\"\\")))),
-        |s: Vec<&str>| Atom::String(s.join(""))
+        terminated(
+            preceded(tag("\""), in_quotes),
+            tag("\"")
+        ),
+        Atom::String
     )(i)
+}
+
+fn in_quotes<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+    let mut result = String::new();
+    let mut skip = false;
+
+    for (i, ch) in s.char_indices() {
+        if ch == '\\' && !skip {
+            skip = true;
+        } else if ch == '"' && !skip {
+            return Ok((&s[i..], result));
+        } else {
+            result.push(ch);
+            skip = false;
+        }
+    }
+    Err(nom::Err::Incomplete(nom::Needed::Unknown))
 }
 
 #[cfg(test)]
@@ -67,19 +80,30 @@ mod tests {
     }
 
     #[test]
-    fn parse_active_double_quote() {
-        assert_eq!(super::active_double_quote("\""), Ok(("", '"')));
+    fn parse_whole_scm_string() {
+        assert_eq!(
+            super::quoted_string("\"This is a test\""),
+            Ok(("", super::Atom::String("This is a test".to_owned())))
+        );
     }
 
-    fn fail_on_non_active_quote() {
-        assert!(super::active_double_quote("\\\"").is_err());
+    #[test]
+    fn parse_scm_string_with_escaped_quotes() {
+        assert_eq!(
+            super::quoted_string("\"This is a \\\"test\\\"\""),
+            Ok(("", super::Atom::String("This is a \"test\"".to_owned())))
+        );
+        // With unclosed escaped string too
+        assert_eq!(
+            super::quoted_string("\"This is a \\\"test\" and some more stuff"),
+            Ok((" and some more stuff", super::Atom::String("This is a \"test".to_owned())))
+        );
     }
 
-    fn parse_escaped_double_quote() {
-        assert_eq!(super::escaped_double_quote("\\\""), Ok(("", '"')));
-    }
-
-    fn fail_on_non_escaped_double_quote() {
-        assert!(super::escaped_double_quote("\"").is_err());
+    #[test]
+    fn fail_to_parse_scm_string_without_active_quotes() {
+        assert!(super::quoted_string("this is a test").is_err());
+        // And also with escaped quotes
+        assert!(super::quoted_string("\\\"this is \\\" a \\\"test\\\"").is_err());
     }
 }
