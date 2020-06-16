@@ -159,32 +159,32 @@ fn atom_float() {
 
 #[test]
 fn atom_symbols() {
-    assert_eq!(symbol("map"), Ok(("", "map".to_owned())));
+    assert_eq!(atom("map"), Ok(("", Atom::Symbol("map".to_owned()))));
     assert_eq!(
-        symbol("^!symbols#$%legal"),
-        Ok(("", "^!symbols#$%legal".to_owned()))
+        atom("^!symbols#$%legal"),
+        Ok(("", Atom::Symbol("^!symbols#$%legal".to_owned())))
     );
-    assert_eq!(symbol("regular-name"), Ok(("", "regular-name".to_owned())));
+    assert_eq!(atom("regular-name"), Ok(("", Atom::Symbol("regular-name".to_owned()))));
     // only get first symbol
     assert_eq!(
-        symbol("this is a test"),
-        Ok((" is a test", "this".to_owned()))
+        atom("this is a test"),
+        Ok((" is a test", Atom::Symbol("this".to_owned())))
     );
     // parse delimited symbol
     assert_eq!(
-        symbol("|this is a symbol|"),
-        Ok(("", "this is a symbol".to_owned()))
+        atom("|this is a symbol|"),
+        Ok(("", Atom::Symbol("this is a symbol".to_owned())))
     );
     // delimited symbol with unmatched delimiters
-    assert_eq!(symbol("|this"), Ok(("", "|this".to_owned())));
+    assert_eq!(atom("|this"), Ok(("", Atom::Symbol("|this".to_owned()))));
     assert_eq!(
-        symbol("|these are many symbols"),
-        Ok((" are many symbols", "|these".to_owned()))
+        atom("|these are many symbols"),
+        Ok((" are many symbols", Atom::Symbol("|these".to_owned())))
     );
-    assert_eq!(symbol("this|"), Ok(("", "this|".to_owned())));
+    assert_eq!(atom("this|"), Ok(("", Atom::Symbol("this|".to_owned()))));
     assert_eq!(
-        symbol("this|is many symbols"),
-        Ok((" many symbols", "this|is".to_owned()))
+        atom("this|is many symbols"),
+        Ok((" many symbols", Atom::Symbol("this|is".to_owned())))
     );
 }
 
