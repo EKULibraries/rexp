@@ -240,7 +240,12 @@ fn string_constant() {
 }
 
 // Quoted Constants
-use rexp::Quote::{Quasi, Quote, Splice, UnQuote};
+use rexp::Quote::{
+    Quasi,
+    Quote,
+//    Splice,
+//    UnQuote,
+};
 
 #[test]
 fn quoted_int() {
