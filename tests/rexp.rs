@@ -1,69 +1,14 @@
 use rexp::*;
-use rexp::parse::{string, symbol, num};
+
+// Quoted Constants
+use rexp::Quote::{
+    Quasi,
+    Quote,
+//    Splice,
+//    UnQuote,
+};
 
 // Higher level parsing tests
-
-// Atoms
-
-// Strings
-
-#[test]
-fn parse_whole_atom_string() {
-    assert_eq!(
-        atom("\"This is a test\""),
-        Ok(("", Atom::String("This is a test".to_owned())))
-    );
-}
-
-#[test]
-fn atom_string_with_escaped_quotes() {
-    assert_eq!(
-        atom("\"This is a \\\"test\\\"\""),
-        Ok(("", Atom::String("This is a \"test\"".to_owned())))
-    );
-    // With unclosed escaped string too
-    assert_eq!(
-        atom("\"This is a \\\"test\" and some more stuff"),
-        Ok((
-            " and some more stuff",
-            Atom::String("This is a \"test".to_owned())
-        ))
-    );
-}
-
-// Symbols
-
-#[test]
-fn atom_symbols() {
-    assert_eq!(atom("map"), Ok(("", Atom::Symbol("map".to_owned()))));
-    assert_eq!(
-        atom("^!symbols#$%legal"),
-        Ok(("", Atom::Symbol("^!symbols#$%legal".to_owned())))
-    );
-    assert_eq!(atom("regular-name"), Ok(("", Atom::Symbol("regular-name".to_owned()))));
-    // only get first symbol
-    assert_eq!(
-        atom("this is a test"),
-        Ok((" is a test", Atom::Symbol("this".to_owned())))
-    );
-    // parse delimited symbol
-    assert_eq!(
-        atom("|this is a symbol|"),
-        Ok(("", Atom::Symbol("this is a symbol".to_owned())))
-    );
-    // delimited symbol with unmatched delimiters
-    assert_eq!(atom("|this"), Ok(("", Atom::Symbol("|this".to_owned()))));
-    assert_eq!(
-        atom("|these are many symbols"),
-        Ok((" are many symbols", Atom::Symbol("|these".to_owned())))
-    );
-    assert_eq!(atom("this|"), Ok(("", Atom::Symbol("this|".to_owned()))));
-    assert_eq!(
-        atom("this|is many symbols"),
-        Ok((" many symbols", Atom::Symbol("this|is".to_owned())))
-    );
-}
-
 // Sexp
 
 #[test]
@@ -115,14 +60,6 @@ fn string_constant() {
         ))
     );
 }
-
-// Quoted Constants
-use rexp::Quote::{
-    Quasi,
-    Quote,
-//    Splice,
-//    UnQuote,
-};
 
 #[test]
 fn quoted_int() {
