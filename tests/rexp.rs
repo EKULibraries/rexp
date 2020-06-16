@@ -167,3 +167,26 @@ fn quoted_symbol() {
         ))
     );
 }
+
+
+
+// Lists
+
+#[test]
+fn simple_list_of_ints() {
+    assert_eq!(
+        sexp("(1 2 3 4 5)"),
+        Ok((
+            "",
+            Sexp::List(
+                vec![
+                    Sexp::Constant(Atom::Num(Num::Int(1))),
+                    Sexp::Constant(Atom::Num(Num::Int(2))),
+                    Sexp::Constant(Atom::Num(Num::Int(3))),
+                    Sexp::Constant(Atom::Num(Num::Int(4))),
+                    Sexp::Constant(Atom::Num(Num::Int(5))),
+                ]
+            )
+        ))
+    );
+}

@@ -54,7 +54,7 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
         }),
-        map(is_not(" \t\n"), |s: &str| s.to_owned()),
+        map(is_not(" \t\n)"), |s: &str| s.to_owned()),
     ))(i)
 }
 
