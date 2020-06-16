@@ -209,3 +209,39 @@ fn simple_list_of_atoms() {
         ))
     );
 }
+
+#[test]
+fn nested_list() {
+    assert_eq!(
+        sexp("(lambda (msg) (println msg))"),
+        Ok((
+            "",
+            Sexp::List(
+                vec![
+                    Sexp::Constant(Atom::Symbol("lambda".to_owned())),
+                    Sexp::List(
+                        vec![
+                            Sexp::Constant(Atom::Symbol("msg".to_owned())),
+                        ]
+                    ),
+                    Sexp::List(
+                        vec![
+                            Sexp::Constant(Atom::Symbol("println".to_owned())),
+                            Sexp::Constant(Atom::Symbol("msg".to_owned())),
+                        ]
+                    ),
+                ]
+            )
+        ))
+    );
+}
+
+// Quoted Lists, Quoted Symbols, Quoted Quotes, and miscellaneous
+
+#[test]
+fn quoted_list() {
+    assert_eq!(
+        sexp("'()"),
+        Ok(("", Sexp::Quote(Quote(Box::new(Sexp::List(vec![]))))))
+    );
+}
