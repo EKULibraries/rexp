@@ -190,3 +190,22 @@ fn simple_list_of_ints() {
         ))
     );
 }
+
+#[test]
+fn simple_list_of_atoms() {
+    assert_eq!(
+        sexp("(func \"some message\" 14 56.3 -3)"),
+        Ok((
+            "",
+            Sexp::List(
+                vec![
+                    Sexp::Constant(Atom::Symbol("func".to_owned())),
+                    Sexp::Constant(Atom::String("some message".to_owned())),
+                    Sexp::Constant(Atom::Num(Num::Int(14))),
+                    Sexp::Constant(Atom::Num(Num::Float(56.3))),
+                    Sexp::Constant(Atom::Num(Num::Int(-3))),
+                ]
+            )
+        ))
+    );
+}
