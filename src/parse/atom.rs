@@ -1,51 +1,22 @@
-// Only turned off for now
-#![allow(dead_code, unused_imports)]
-
 use nom::{
     branch::alt,
-    bytes::complete::{is_not, tag},
-    character::complete::{alpha0, alpha1, char, digit1, multispace0, multispace1, one_of},
-    combinator::{cut, map, map_res, not, opt},
-    error::{context, VerboseError, VerboseErrorKind::Context},
-    multi::many0,
-    sequence::{delimited, preceded, separated_pair, terminated, tuple},
-    take_while, Err, IResult, Needed, Parser,
+    bytes::complete::{ is_not, tag },
+    character::complete::digit1,
+    combinator::{ map, map_res },
+    sequence::{
+        preceded,
+        delimited,
+        terminated,
+        separated_pair,
+    },
+    error::{
+        VerboseError,
+        VerboseErrorKind::Context,
+    },
+    IResult, Err,
 };
 
-use crate::expr::*;
-
-fn quote_bouncer<'a>(
-    mut parser: impl FnMut(&'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>>,
-    builder: impl Fn(Box<Sexp>) -> Quote,
-    msg: &'static str,
-) -> impl FnMut(&'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
-    move |i: &'a str| match parser(i) {
-        Ok((ii, ss)) => match ss {
-            Sexp::Constant(_) => Err(Err::Failure(VerboseError {
-                errors: vec![(ii, Context(msg))],
-            })),
-            _ => Ok((ii, builder(Box::new(ss)))),
-        },
-        Err(err) => Err(err),
-    }
-}
-
-pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
-    alt((
-        map(preceded(tag("'"), sexp), |s| Quote::Quote(Box::new(s))),
-        map(preceded(tag("`"), sexp), |s| Quote::Quasi(Box::new(s))),
-        quote_bouncer(
-            preceded(tag(","), sexp),
-            Quote::UnQuote,
-            "can't unquote literals",
-        ),
-        quote_bouncer(
-            preceded(tag("@"), sexp),
-            Quote::Splice,
-            "can't splice literals",
-        ),
-    ))(i)
-}
+use crate::expr::{ Atom, Num };
 
 pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     alt((
@@ -55,22 +26,7 @@ pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     ))(i)
 }
 
-pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
-    alt((
-        map(quote, Sexp::Quote),
-        map(
-            delimited(
-                char('('),
-                many0(preceded(multispace0, sexp)),
-                context("closing paren", cut(preceded(multispace0, char(')')))),
-            ),
-            Sexp::List,
-        ),
-        map(atom, Sexp::Constant),
-    ))(i)
-}
-
-pub fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     terminated(preceded(tag("\""), string_inner), tag("\""))(i)
 }
 
@@ -93,7 +49,7 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
     }))
 }
 
-pub fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
     alt((
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
@@ -102,7 +58,7 @@ pub fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>>
     ))(i)
 }
 
-pub fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
+fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
     alt((
         // Floats
         map_res(
@@ -132,6 +88,7 @@ pub fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     // Strings
 
     #[test]
@@ -255,5 +212,67 @@ mod tests {
 
         assert_eq!(atom("-254.345"), Ok(("", Atom::Num(Num::Float(-254.345)))));
     }
+
+// Atoms
+
+// Strings
+
+#[test]
+fn parse_whole_atom_string() {
+    assert_eq!(
+        atom("\"This is a test\""),
+        Ok(("", Atom::String("This is a test".to_owned())))
+    );
+}
+
+#[test]
+fn atom_string_with_escaped_quotes() {
+    assert_eq!(
+        atom("\"This is a \\\"test\\\"\""),
+        Ok(("", Atom::String("This is a \"test\"".to_owned())))
+    );
+    // With unclosed escaped string too
+    assert_eq!(
+        atom("\"This is a \\\"test\" and some more stuff"),
+        Ok((
+            " and some more stuff",
+            Atom::String("This is a \"test".to_owned())
+        ))
+    );
+}
+
+// Symbols
+
+#[test]
+fn atom_symbols() {
+    assert_eq!(atom("map"), Ok(("", Atom::Symbol("map".to_owned()))));
+    assert_eq!(
+        atom("^!symbols#$%legal"),
+        Ok(("", Atom::Symbol("^!symbols#$%legal".to_owned())))
+    );
+    assert_eq!(atom("regular-name"), Ok(("", Atom::Symbol("regular-name".to_owned()))));
+    // only get first symbol
+    assert_eq!(
+        atom("this is a test"),
+        Ok((" is a test", Atom::Symbol("this".to_owned())))
+    );
+    // parse delimited symbol
+    assert_eq!(
+        atom("|this is a symbol|"),
+        Ok(("", Atom::Symbol("this is a symbol".to_owned())))
+    );
+    // delimited symbol with unmatched delimiters
+    assert_eq!(atom("|this"), Ok(("", Atom::Symbol("|this".to_owned()))));
+    assert_eq!(
+        atom("|these are many symbols"),
+        Ok((" are many symbols", Atom::Symbol("|these".to_owned())))
+    );
+    assert_eq!(atom("this|"), Ok(("", Atom::Symbol("this|".to_owned()))));
+    assert_eq!(
+        atom("this|is many symbols"),
+        Ok((" many symbols", Atom::Symbol("this|is".to_owned())))
+    );
+}
+
 
 }
