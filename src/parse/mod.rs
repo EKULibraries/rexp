@@ -1,15 +1,12 @@
-// Only turned off for now
-#![allow(dead_code, unused_imports)]
-
+/// Limit the exposed interface of the parser internals.
 use nom::{
+    IResult,
     branch::alt,
-    bytes::complete::{is_not, tag},
-    character::complete::{alpha0, alpha1, char, digit1, multispace0, multispace1, one_of},
-    combinator::{cut, map, map_res, not, opt},
-    error::{context, VerboseError, VerboseErrorKind::Context},
     multi::many0,
-    sequence::{delimited, preceded, separated_pair, terminated, tuple},
-    take_while, Err, IResult, Needed, Parser,
+    combinator::{ cut, map },
+    error::{ context, VerboseError },
+    sequence::{ delimited, preceded },
+    character::complete::{ char, multispace0 },
 };
 
 use crate::expr::*;
@@ -33,9 +30,4 @@ pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
         ),
         map(atom, Sexp::Constant),
     ))(i)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
 }

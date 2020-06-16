@@ -1,3 +1,4 @@
+/// Symbolic Expression Types.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Num {
     Int(i64),
