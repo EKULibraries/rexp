@@ -1,4 +1,5 @@
 use rexp::*;
+use rexp::parse::{string, symbol, num};
 
 // Strings
 
