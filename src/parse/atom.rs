@@ -54,7 +54,7 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
         }),
-        map(is_not(" \t\n)"), |s: &str| s.to_owned()),
+        map(is_not(" \t\n()"), |s: &str| s.to_owned()),
     ))(i)
 }
 
@@ -158,6 +158,19 @@ mod tests {
         assert_eq!(
             symbol("this is a test"),
             Ok((" is a test", "this".to_owned()))
+        );
+    }
+
+    #[test]
+    fn symbol_cant_containt_parens() {
+        assert_eq!(
+            symbol("symbol("),
+            Ok(("(", "symbol".to_owned()))
+        );
+
+        assert_eq!(
+            symbol("fun-an)d-games"),
+            Ok((")d-games", "fun-an".to_owned()))
         );
     }
 
