@@ -8,6 +8,7 @@ pub enum Num {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Atom {
     Num(Num),
+    Char(char),
     Symbol(String),
     String(String),
 }
