@@ -236,6 +236,54 @@ fn nested_list() {
     );
 }
 
+
+
+// Vectors
+
+#[test]
+fn empty_vector() {
+    assert_eq!(sexp("#()"), Ok(("", Sexp::Vector(vec![]))));
+}
+
+#[test]
+fn vector_of_nums() {
+    assert_eq!(
+        sexp("#(14 15 16)"),
+        Ok(("", Sexp::Vector(vec![
+            Sexp::Constant(Atom::Num(Num::Int(14))),
+            Sexp::Constant(Atom::Num(Num::Int(15))),
+            Sexp::Constant(Atom::Num(Num::Int(16))),
+        ])))
+    );
+}
+
+#[test]
+fn vector_of_vecs_and_lists() {
+    assert_eq!(
+        sexp("#(#(1 2 3) (this \"is\" a \"test\") #(4 5 6))"),
+        Ok(("", Sexp::Vector(vec![
+            Sexp::Vector(vec![
+                Sexp::Constant(Atom::Num(Num::Int(1))),
+                Sexp::Constant(Atom::Num(Num::Int(2))),
+                Sexp::Constant(Atom::Num(Num::Int(3))),
+            ]),
+            Sexp::List(vec![
+                Sexp::Constant(Atom::Symbol("this".to_owned())),
+                Sexp::Constant(Atom::String("is".to_owned())),
+                Sexp::Constant(Atom::Symbol("a".to_owned())),
+                Sexp::Constant(Atom::String("test".to_owned())),
+            ]),
+            Sexp::Vector(vec![
+                Sexp::Constant(Atom::Num(Num::Int(4))),
+                Sexp::Constant(Atom::Num(Num::Int(5))),
+                Sexp::Constant(Atom::Num(Num::Int(6))),
+            ]),
+        ])))
+    );
+}
+
+
+
 // Quoted Lists, Quoted Symbols, Quoted Quotes, and miscellaneous
 
 #[test]
