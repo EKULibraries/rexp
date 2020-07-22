@@ -20,14 +20,15 @@ use atom::atom;
 pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
     alt((
         map(quote, Sexp::Quote),
-        map(
-            delimited(
-                char('('),
-                many0(preceded(multispace0, sexp)),
-                context("closing paren", cut(preceded(multispace0, char(')')))),
-            ),
-            Sexp::List,
-        ),
+        map(list, Sexp::List),
         map(atom, Sexp::Constant),
     ))(i)
+}
+
+fn list<'a>(i: &'a str) -> IResult<&'a str, Vec<Sexp>, VerboseError<&'a str>> {
+    delimited(
+        char('('),
+        many0(preceded(multispace0, sexp)),
+        context("closing paren", cut(preceded(multispace0, char(')'))))
+    )(i)
 }

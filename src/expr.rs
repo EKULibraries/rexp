@@ -22,7 +22,8 @@ pub enum Quote {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Sexp {
+    Quote(Quote),
     Constant(Atom),
     List(Vec<Sexp>),
-    Quote(Quote),
+    Vector(Vec<Sexp>),
 }
