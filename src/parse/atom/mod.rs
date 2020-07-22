@@ -151,7 +151,7 @@ fn process_char<'a>(i: &'a str) -> char {
             "us"                           => 0x1F as char,
             "sp"  | "space"                => 0x20 as char,
             // End of `C0` characters
-            "delete"                      => 0x7F as char,
+            "del" | "delete"               => 0x7F as char,
             _ => panic!("Should find a way to handle this more gracefully"),
         }
     }
@@ -336,6 +336,25 @@ mod tests {
         assert_eq!(atom("#\\a"), Ok(("", Atom::Char('a'))));
         assert_eq!(atom("#\\b"), Ok(("", Atom::Char('b'))));
         assert_eq!(atom("#\\Z"), Ok(("", Atom::Char('Z'))));
+    }
+
+    #[test]
+    fn named_char_literals() {
+        assert_eq!(atom("#\\nul"), Ok(("", Atom::Char(0x00 as char))));
+        assert_eq!(atom("#\\alarm"), Ok(("", Atom::Char(0x07 as char))));
+        assert_eq!(atom("#\\backspace"), Ok(("", Atom::Char(0x08 as char))));
+        assert_eq!(atom("#\\tab"), Ok(("", Atom::Char('\t'))));
+        assert_eq!(atom("#\\newline"), Ok(("", Atom::Char('\n'))));
+        assert_eq!(atom("#\\linefeed"), Ok(("", Atom::Char('\n'))));
+        assert_eq!(atom("#\\vtab"), Ok(("", Atom::Char(0x0B as char))));
+        assert_eq!(atom("#\\page"), Ok(("", Atom::Char(0x0C as char))));
+        assert_eq!(atom("#\\return"), Ok(("", Atom::Char(0x0D as char))));
+        assert_eq!(atom("#\\esc"), Ok(("", Atom::Char(0x1B as char))));
+        // R&RS compatibility
+        assert_eq!(atom("#\\escape"), Ok(("", Atom::Char(0x1B as char))));
+        assert_eq!(atom("#\\space"), Ok(("", Atom::Char(' '))));
+        assert_eq!(atom("#\\del"), Ok(("", Atom::Char(0x7F as char))));
+        assert_eq!(atom("#\\delete"), Ok(("", Atom::Char(0x7F as char))));
     }
 
 
