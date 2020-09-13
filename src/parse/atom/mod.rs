@@ -111,7 +111,7 @@ fn lit_char<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
 }
 
 // Currently this panics if the char is invalid
-fn process_char<'a>(i: &'a str) -> char {
+fn process_char(i: &str) -> char {
     if i.len() == 1 {
         i.chars().next().unwrap()
     } else {
