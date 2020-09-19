@@ -1,42 +1,36 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{ is_not, tag },
-    character::complete::digit1,
-    combinator::{ map, map_res },
-    sequence::{
-        preceded,
-        delimited,
-        terminated,
-        separated_pair,
-    },
+    branch,
+    bytes,
+    character,
+    combinator,
+    sequence,
     error::{
         VerboseError,
-        VerboseErrorKind::Context,
+        VerboseErrorKind,
     },
-    IResult, Err,
+    IResult,
 };
 
-use crate::expr::{ Atom, Num };
-
-
+use crate::expr::{
+    Atom,
+    Num
+};
 
 // Public
 
 pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
-    alt((
-        map(num, Atom::Num),
-        map(lit_char, Atom::Char),
-        map(string, Atom::String),
-        map(symbol, Atom::Symbol),
+    branch::alt((
+        combinator::map(num, Atom::Num),
+        combinator::map(lit_char, Atom::Char),
+        combinator::map(string, Atom::String),
+        combinator::map(symbol, Atom::Symbol),
     ))(i)
 }
-
-
 
 // String parsing
 
 fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
-    terminated(preceded(tag("\""), string_inner), tag("\""))(i)
+    sequence::terminated(sequence::preceded(bytes::complete::tag("\""), string_inner), bytes::complete::tag("\""))(i)
 }
 
 fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
@@ -53,8 +47,8 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
             skip = false;
         }
     }
-    Err(Err::Error(VerboseError {
-        errors: vec![(s, Context("string missing closing \""))],
+    Err(nom::Err::Error(VerboseError {
+        errors: vec![(s, VerboseErrorKind::Context("string missing closing \""))],
     }))
 }
 
@@ -63,11 +57,11 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
 // Symbol parsing
 
 fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
-    alt((
-        map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
+    branch::alt((
+        combinator::map(sequence::delimited(bytes::complete::tag("|"), bytes::complete::is_not("|"), bytes::complete::tag("|")), |s: &str| {
             s.to_owned()
         }),
-        map(is_not(" \t\r\n()"), |s: &str| s.to_owned()),
+        combinator::map(bytes::complete::is_not(" \t\r\n()"), |s: &str| s.to_owned()),
     ))(i)
 }
 
@@ -76,18 +70,18 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
 // Number parsing
 
 fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
-    alt((
+    branch::alt((
         // Floats
-        map_res(
-            separated_pair(digit1, tag("."), digit1),
+        combinator::map_res(
+            sequence::separated_pair(character::complete::digit1, bytes::complete::tag("."), character::complete::digit1),
             |(whole, part): (&str, &str)| {
                 (whole.to_owned() + "." + part)
                     .parse::<f64>()
                     .map(Num::Float)
             },
         ),
-        map_res(
-            preceded(tag("-"), separated_pair(digit1, tag("."), digit1)),
+        combinator::map_res(
+            sequence::preceded(bytes::complete::tag("-"), sequence::separated_pair(character::complete::digit1, bytes::complete::tag("."), character::complete::digit1)),
             |(whole, part): (&str, &str)| {
                 (whole.to_owned() + "." + part)
                     .parse::<f64>()
@@ -95,8 +89,8 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
             },
         ),
         // Ints
-        map_res(digit1, |d: &str| d.parse::<i64>().map(Num::Int)),
-        map_res(preceded(tag("-"), digit1), |d: &str| {
+        combinator::map_res(character::complete::digit1, |d: &str| d.parse::<i64>().map(Num::Int)),
+        combinator::map_res(sequence::preceded(bytes::complete::tag("-"), character::complete::digit1), |d: &str| {
             d.parse::<i64>().map(|i| Num::Int(-i))
         }),
     ))(i)
@@ -107,7 +101,7 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 // Character literal parsing
 
 fn lit_char<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    map(preceded(tag("#\\"), is_not(" \t\r\n")), process_char)(i)
+    combinator::map(sequence::preceded(bytes::complete::tag("#\\"), bytes::complete::is_not(" \t\r\n")), process_char)(i)
 }
 
 // Currently this panics if the char is invalid
@@ -236,7 +230,7 @@ mod tests {
     }
 
     #[test]
-    fn symbol_cant_containt_parens() {
+    fn symbol_cannot_contain_parens() {
         assert_eq!(
             symbol("symbol("),
             Ok(("(", "symbol".to_owned()))

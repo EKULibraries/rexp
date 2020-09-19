@@ -1,19 +1,25 @@
-use rexp::*;
-
-// Quoted Constants
-use rexp::Quote::{
-    Quasi,
-    Quote,
-//    Splice,
-//    UnQuote,
+use rexp::{
+    expr::{
+        Atom,
+        Num,
+        // Quoted Constants
+        Quote::{
+            Quasi,
+            Quote,
+            //Splice,
+            //UnQuote,
+        },
+        Sexp,
+    },
+    parse,
 };
 
 // Higher level parsing tests
 // Sexp
 
 #[test]
-fn fails_on_empy_sexp() {
-    assert!(sexp("").is_err());
+fn fails_on_empty_sexp() {
+    assert!(parse::sexp("").is_err());
 }
 
 // Constants
@@ -21,11 +27,11 @@ fn fails_on_empy_sexp() {
 #[test]
 fn int_constant() {
     assert_eq!(
-        sexp("345"),
+        parse::sexp("345"),
         Ok(("", Sexp::Constant(Atom::Num(Num::Int(345)))))
     );
     assert_eq!(
-        sexp("-345"),
+        parse::sexp("-345"),
         Ok(("", Sexp::Constant(Atom::Num(Num::Int(-345)))))
     );
 }
@@ -33,11 +39,11 @@ fn int_constant() {
 #[test]
 fn float_constant() {
     assert_eq!(
-        sexp("756.314"),
+        parse::sexp("756.314"),
         Ok(("", Sexp::Constant(Atom::Num(Num::Float(756.314)))))
     );
     assert_eq!(
-        sexp("-756.314"),
+        parse::sexp("-756.314"),
         Ok(("", Sexp::Constant(Atom::Num(Num::Float(-756.314)))))
     );
 }
@@ -45,7 +51,7 @@ fn float_constant() {
 #[test]
 fn symbol_constant() {
     assert_eq!(
-        sexp("name"),
+        parse::sexp("name"),
         Ok(("", Sexp::Constant(Atom::Symbol("name".to_owned()))))
     );
 }
@@ -53,7 +59,7 @@ fn symbol_constant() {
 #[test]
 fn string_constant() {
     assert_eq!(
-        sexp("\"This is a \\\"string\\\"!\""),
+        parse::sexp("\"This is a \\\"string\\\"!\""),
         Ok((
             "",
             Sexp::Constant(Atom::String("This is a \"string\"!".to_owned()))
@@ -64,14 +70,14 @@ fn string_constant() {
 #[test]
 fn quoted_int() {
     assert_eq!(
-        sexp("'345"),
+        parse::sexp("'345"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))
         ))
     );
     assert_eq!(
-        sexp("'-345"),
+        parse::sexp("'-345"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Int(-345))))))
@@ -79,7 +85,7 @@ fn quoted_int() {
     );
     // Quasi
     assert_eq!(
-        sexp("`345"),
+        parse::sexp("`345"),
         Ok((
             "",
             Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Int(345))))))
@@ -88,16 +94,16 @@ fn quoted_int() {
 }
 
 #[test]
-fn cant_splice_unquote_int() {
-    assert!(sexp(",345").is_err());
+fn cannot_splice_unquote_int() {
+    assert!(parse::sexp(",345").is_err());
 
-    assert!(sexp("@345").is_err());
+    assert!(parse::sexp("@345").is_err());
 }
 
 #[test]
 fn quoted_float() {
     assert_eq!(
-        sexp("'756.314"),
+        parse::sexp("'756.314"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(
@@ -106,7 +112,7 @@ fn quoted_float() {
         ))
     );
     assert_eq!(
-        sexp("'-756.314"),
+        parse::sexp("'-756.314"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Num(Num::Float(
@@ -116,7 +122,7 @@ fn quoted_float() {
     );
     // Quasi
     assert_eq!(
-        sexp("`756.314"),
+        parse::sexp("`756.314"),
         Ok((
             "",
             Sexp::Quote(Quasi(Box::new(Sexp::Constant(Atom::Num(Num::Float(
@@ -127,16 +133,16 @@ fn quoted_float() {
 }
 
 #[test]
-fn cant_splice_or_quote_float() {
-    assert!(sexp(",756.314").is_err());
+fn cannot_splice_or_quote_float() {
+    assert!(parse::sexp(",756.314").is_err());
 
-    assert!(sexp("@756.314").is_err());
+    assert!(parse::sexp("@756.314").is_err());
 }
 
 #[test]
 fn quoted_string() {
     assert_eq!(
-        sexp("'\"this is a quoted string\""),
+        parse::sexp("'\"this is a quoted string\""),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::String(
@@ -149,7 +155,7 @@ fn quoted_string() {
 #[test]
 fn quoted_symbol() {
     assert_eq!(
-        sexp("'symbol"),
+        parse::sexp("'symbol"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol(
@@ -158,7 +164,7 @@ fn quoted_symbol() {
         ))
     );
     assert_eq!(
-        sexp("'|this symbol has spaces|"),
+        parse::sexp("'|this symbol has spaces|"),
         Ok((
             "",
             Sexp::Quote(Quote(Box::new(Sexp::Constant(Atom::Symbol(
@@ -175,7 +181,7 @@ fn quoted_symbol() {
 #[test]
 fn simple_list_of_ints() {
     assert_eq!(
-        sexp("(1 2 3 4 5)"),
+        parse::sexp("(1 2 3 4 5)"),
         Ok((
             "",
             Sexp::List(
@@ -194,7 +200,7 @@ fn simple_list_of_ints() {
 #[test]
 fn simple_list_of_atoms() {
     assert_eq!(
-        sexp("(func \"some message\" 14 56.3 -3)"),
+        parse::sexp("(func \"some message\" 14 56.3 -3)"),
         Ok((
             "",
             Sexp::List(
@@ -213,7 +219,7 @@ fn simple_list_of_atoms() {
 #[test]
 fn nested_list() {
     assert_eq!(
-        sexp("(lambda (msg) (println msg))"),
+        parse::sexp("(lambda (msg) (println msg))"),
         Ok((
             "",
             Sexp::List(
@@ -242,13 +248,13 @@ fn nested_list() {
 
 #[test]
 fn empty_vector() {
-    assert_eq!(sexp("#()"), Ok(("", Sexp::Vector(vec![]))));
+    assert_eq!(parse::sexp("#()"), Ok(("", Sexp::Vector(vec![]))));
 }
 
 #[test]
 fn vector_of_nums() {
     assert_eq!(
-        sexp("#(14 15 16)"),
+        parse::sexp("#(14 15 16)"),
         Ok(("", Sexp::Vector(vec![
             Sexp::Constant(Atom::Num(Num::Int(14))),
             Sexp::Constant(Atom::Num(Num::Int(15))),
@@ -260,7 +266,7 @@ fn vector_of_nums() {
 #[test]
 fn vector_of_vecs_and_lists() {
     assert_eq!(
-        sexp("#(#(1 2 3) (this \"is\" a \"test\") #(4 5 6))"),
+        parse::sexp("#(#(1 2 3) (this \"is\" a \"test\") #(4 5 6))"),
         Ok(("", Sexp::Vector(vec![
             Sexp::Vector(vec![
                 Sexp::Constant(Atom::Num(Num::Int(1))),
@@ -289,7 +295,7 @@ fn vector_of_vecs_and_lists() {
 #[test]
 fn quoted_list() {
     assert_eq!(
-        sexp("'()"),
+        parse::sexp("'()"),
         Ok(("", Sexp::Quote(Quote(Box::new(Sexp::List(vec![]))))))
     );
 }

@@ -1,18 +1,21 @@
 use crate::{
-    expr::*,
-    parse::sexp,
+    expr::{
+        Quote,
+        Sexp,
+    },
+    parse,
 };
 
 use nom::{
-    branch::alt,
-    sequence::preceded,
-    bytes::complete::tag,
-    combinator::map,
+    branch,
+    sequence,
+    bytes::complete,
+    combinator,
     error::{
         VerboseError,
-        VerboseErrorKind::Context,
+        VerboseErrorKind,
     },
-    IResult, Err,
+    IResult,
 };
 
 fn quote_bouncer<'a>(
@@ -22,8 +25,8 @@ fn quote_bouncer<'a>(
 ) -> impl FnMut(&'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
     move |i: &'a str| match parser(i) {
         Ok((ii, ss)) => match ss {
-            Sexp::Constant(_) => Err(Err::Failure(VerboseError {
-                errors: vec![(ii, Context(msg))],
+            Sexp::Constant(_) => Err(nom::Err::Failure(VerboseError {
+                errors: vec![(ii, VerboseErrorKind::Context(msg))],
             })),
             _ => Ok((ii, builder(Box::new(ss)))),
         },
@@ -32,16 +35,16 @@ fn quote_bouncer<'a>(
 }
 
 pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
-    alt((
-        map(preceded(tag("'"), sexp), |s| Quote::Quote(Box::new(s))),
-        map(preceded(tag("`"), sexp), |s| Quote::Quasi(Box::new(s))),
+    branch::alt((
+        combinator::map(sequence::preceded(complete::tag("'"), parse::sexp), |s| Quote::Quote(Box::new(s))),
+        combinator::map(sequence::preceded(complete::tag("`"), parse::sexp), |s| Quote::Quasi(Box::new(s))),
         quote_bouncer(
-            preceded(tag(","), sexp),
+            sequence::preceded(complete::tag(","), parse::sexp),
             Quote::UnQuote,
             "can't unquote literals",
         ),
         quote_bouncer(
-            preceded(tag("@"), sexp),
+            sequence::preceded(complete::tag("@"), parse::sexp),
             Quote::Splice,
             "can't splice literals",
         ),
