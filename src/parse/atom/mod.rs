@@ -19,18 +19,21 @@ use crate::expr::{
 // Public
 
 pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
+    use combinator::map;
     branch::alt((
-        combinator::map(num, Atom::Num),
-        combinator::map(lit_char, Atom::Char),
-        combinator::map(string, Atom::String),
-        combinator::map(symbol, Atom::Symbol),
+        map(num, Atom::Num),
+        map(lit_char, Atom::Char),
+        map(string, Atom::String),
+        map(symbol, Atom::Symbol),
     ))(i)
 }
 
 // String parsing
 
 fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
-    sequence::terminated(sequence::preceded(bytes::complete::tag("\""), string_inner), bytes::complete::tag("\""))(i)
+    use bytes::complete::tag;
+    use sequence::{terminated, preceded};
+    terminated(preceded(tag("\""), string_inner), tag("\""))(i)
 }
 
 fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
@@ -57,11 +60,14 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
 // Symbol parsing
 
 fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+    use combinator::map;
+    use sequence::delimited;
+    use bytes::complete::{tag, is_not};
     branch::alt((
-        combinator::map(sequence::delimited(bytes::complete::tag("|"), bytes::complete::is_not("|"), bytes::complete::tag("|")), |s: &str| {
+        map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
         }),
-        combinator::map(bytes::complete::is_not(" \t\r\n()"), |s: &str| s.to_owned()),
+        map(is_not(" \t\r\n()"), |s: &str| s.to_owned()),
     ))(i)
 }
 
@@ -70,18 +76,22 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
 // Number parsing
 
 fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
+    use combinator::map_res;
+    use bytes::complete::tag;
+    use character::complete::digit1;
+    use sequence::{preceded, separated_pair};
     branch::alt((
         // Floats
-        combinator::map_res(
-            sequence::separated_pair(character::complete::digit1, bytes::complete::tag("."), character::complete::digit1),
+        map_res(
+            separated_pair(digit1, tag("."), digit1),
             |(whole, part): (&str, &str)| {
                 (whole.to_owned() + "." + part)
                     .parse::<f64>()
                     .map(Num::Float)
             },
         ),
-        combinator::map_res(
-            sequence::preceded(bytes::complete::tag("-"), sequence::separated_pair(character::complete::digit1, bytes::complete::tag("."), character::complete::digit1)),
+        map_res(
+            preceded(tag("-"), separated_pair(digit1, tag("."), digit1)),
             |(whole, part): (&str, &str)| {
                 (whole.to_owned() + "." + part)
                     .parse::<f64>()
@@ -89,8 +99,8 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
             },
         ),
         // Ints
-        combinator::map_res(character::complete::digit1, |d: &str| d.parse::<i64>().map(Num::Int)),
-        combinator::map_res(sequence::preceded(bytes::complete::tag("-"), character::complete::digit1), |d: &str| {
+        map_res(digit1, |d: &str| d.parse::<i64>().map(Num::Int)),
+        map_res(preceded(tag("-"), digit1), |d: &str| {
             d.parse::<i64>().map(|i| Num::Int(-i))
         }),
     ))(i)
@@ -101,7 +111,10 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 // Character literal parsing
 
 fn lit_char<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
-    combinator::map(sequence::preceded(bytes::complete::tag("#\\"), bytes::complete::is_not(" \t\r\n")), process_char)(i)
+    use combinator::map;
+    use sequence::preceded;
+    use bytes::complete::{tag, is_not};
+    map(preceded(tag("#\\"), is_not(" \t\r\n")), process_char)(i)
 }
 
 // Currently this panics if the char is invalid

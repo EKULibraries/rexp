@@ -35,16 +35,19 @@ fn quote_bouncer<'a>(
 }
 
 pub fn quote<'a>(i: &'a str) -> IResult<&'a str, Quote, VerboseError<&'a str>> {
+    use complete::tag;
+    use combinator::map;
+    use sequence::preceded;
     branch::alt((
-        combinator::map(sequence::preceded(complete::tag("'"), parse::sexp), |s| Quote::Quote(Box::new(s))),
-        combinator::map(sequence::preceded(complete::tag("`"), parse::sexp), |s| Quote::Quasi(Box::new(s))),
+        map(preceded(tag("'"), parse::sexp), |s| Quote::Quote(Box::new(s))),
+        map(preceded(tag("`"), parse::sexp), |s| Quote::Quasi(Box::new(s))),
         quote_bouncer(
-            sequence::preceded(complete::tag(","), parse::sexp),
+            preceded(tag(","), parse::sexp),
             Quote::UnQuote,
             "can't unquote literals",
         ),
         quote_bouncer(
-            sequence::preceded(complete::tag("@"), parse::sexp),
+            preceded(tag("@"), parse::sexp),
             Quote::Splice,
             "can't splice literals",
         ),

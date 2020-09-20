@@ -18,25 +18,28 @@ pub mod atom;
 use atom::atom;
 
 pub fn sexp<'a>(i: &'a str) -> IResult<&'a str, Sexp, VerboseError<&'a str>> {
+    use combinator::map;
     branch::alt((
-        combinator::map(quote, Sexp::Quote),
-        combinator::map(list, Sexp::List),
-        combinator::map(vector, Sexp::Vector),
+        map(quote, Sexp::Quote),
+        map(list, Sexp::List),
+        map(vector, Sexp::Vector),
         // `atom` is very greedy, so it needs to come last
-        combinator::map(atom, Sexp::Constant),
+        map(atom, Sexp::Constant),
     ))(i)
 }
 
 fn list<'a>(i: &'a str) -> IResult<&'a str, Vec<Sexp>, VerboseError<&'a str>> {
-    sequence::delimited(
-        complete::char('('),
-        multi::many0(sequence::preceded(complete::multispace0, sexp)),
+    use sequence::{preceded, delimited};
+    use complete::{char, multispace0};
+    delimited(
+        char('('),
+        multi::many0(preceded(multispace0, sexp)),
         error::context(
             "closing paren",
             combinator::cut(
-                sequence::preceded(
-                    complete::multispace0,
-                    complete::char(')'))))
+                preceded(
+                    multispace0,
+                    char(')'))))
     )(i)
 }
 
