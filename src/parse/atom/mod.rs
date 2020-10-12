@@ -1,29 +1,26 @@
 use nom::{
-    branch::alt,
-    bytes::complete::{ is_not, tag },
-    character::complete::digit1,
-    combinator::{ map, map_res },
-    sequence::{
-        preceded,
-        delimited,
-        terminated,
-        separated_pair,
-    },
+    branch,
+    bytes,
+    character,
+    combinator,
+    sequence,
     error::{
         VerboseError,
-        VerboseErrorKind::Context,
+        VerboseErrorKind,
     },
-    IResult, Err,
+    IResult,
 };
 
-use crate::expr::{ Atom, Num };
-
-
+use crate::expr::{
+    Atom,
+    Num
+};
 
 // Public
 
 pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
-    alt((
+    use combinator::map;
+    branch::alt((
         map(num, Atom::Num),
         map(lit_char, Atom::Char),
         map(string, Atom::String),
@@ -31,11 +28,11 @@ pub fn atom<'a>(i: &'a str) -> IResult<&'a str, Atom, VerboseError<&'a str>> {
     ))(i)
 }
 
-
-
 // String parsing
 
 fn string<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
+    use bytes::complete::tag;
+    use sequence::{terminated, preceded};
     terminated(preceded(tag("\""), string_inner), tag("\""))(i)
 }
 
@@ -53,8 +50,8 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
             skip = false;
         }
     }
-    Err(Err::Error(VerboseError {
-        errors: vec![(s, Context("string missing closing \""))],
+    Err(nom::Err::Error(VerboseError {
+        errors: vec![(s, VerboseErrorKind::Context("string missing closing \""))],
     }))
 }
 
@@ -63,7 +60,10 @@ fn string_inner<'a>(s: &'a str) -> IResult<&'a str, String, VerboseError<&'a str
 // Symbol parsing
 
 fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
-    alt((
+    use combinator::map;
+    use sequence::delimited;
+    use bytes::complete::{tag, is_not};
+    branch::alt((
         map(delimited(tag("|"), is_not("|"), tag("|")), |s: &str| {
             s.to_owned()
         }),
@@ -76,7 +76,11 @@ fn symbol<'a>(i: &'a str) -> IResult<&'a str, String, VerboseError<&'a str>> {
 // Number parsing
 
 fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
-    alt((
+    use combinator::map_res;
+    use bytes::complete::tag;
+    use character::complete::digit1;
+    use sequence::{preceded, separated_pair};
+    branch::alt((
         // Floats
         map_res(
             separated_pair(digit1, tag("."), digit1),
@@ -107,11 +111,14 @@ fn num<'a>(i: &'a str) -> IResult<&'a str, Num, VerboseError<&'a str>> {
 // Character literal parsing
 
 fn lit_char<'a>(i: &'a str) -> IResult<&'a str, char, VerboseError<&'a str>> {
+    use combinator::map;
+    use sequence::preceded;
+    use bytes::complete::{tag, is_not};
     map(preceded(tag("#\\"), is_not(" \t\r\n")), process_char)(i)
 }
 
 // Currently this panics if the char is invalid
-fn process_char<'a>(i: &'a str) -> char {
+fn process_char(i: &str) -> char {
     if i.len() == 1 {
         i.chars().next().unwrap()
     } else {
@@ -236,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn symbol_cant_containt_parens() {
+    fn symbol_cannot_contain_parens() {
         assert_eq!(
             symbol("symbol("),
             Ok(("(", "symbol".to_owned()))
